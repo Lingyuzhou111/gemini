@@ -87,7 +87,67 @@ async function handleRequest(req: Request): Promise<Response> {
   // 处理 Gemini API 的 generateContent 请求
   if (url.pathname.includes(":generateContent")) {
     console.log('Handling generateContent request:', url.pathname);
-    return handleAPIRequest(req);
+    
+    // 提取模型名称和请求路径
+    const modelPath = url.pathname.split('/v1beta/')[1];
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/${modelPath}`;
+    
+    // 获取授权头
+    const authHeader = req.headers.get("Authorization");
+    
+    // 创建请求选项
+    const options: RequestInit = {
+      method: req.method,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
+    
+    // 如果有授权头，则添加到请求中
+    if (authHeader) {
+      const apiKey = authHeader.split(" ")[1];
+      const url = new URL(apiUrl);
+      url.searchParams.append("key", apiKey);
+      
+      // 转发请求体
+      if (req.method !== "GET" && req.method !== "HEAD") {
+        options.body = await req.text();
+      }
+      
+      try {
+        console.log(`Forwarding request to: ${url.toString()}`);
+        const response = await fetch(url.toString(), options);
+        const responseData = await response.text();
+        console.log(`Response status: ${response.status}`);
+        console.log(`Response data length: ${responseData.length}`);
+        
+        // 返回响应
+        return new Response(responseData, {
+          status: response.status,
+          headers: {
+            "Content-Type": response.headers.get("Content-Type") || "application/json",
+            "Access-Control-Allow-Origin": "*",
+          },
+        });
+      } catch (error) {
+        console.error("Error forwarding request:", error);
+        return new Response(JSON.stringify({ error: "Error forwarding request" }), {
+          status: 500,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+          },
+        });
+      }
+    } else {
+      return new Response(JSON.stringify({ error: "Authorization header required" }), {
+        status: 401,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+      });
+    }
   }
 
   return new Response('ok');
