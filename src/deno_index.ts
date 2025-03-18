@@ -84,6 +84,12 @@ async function handleRequest(req: Request): Promise<Response> {
     return handleAPIRequest(req);
   }
 
+  // 处理 Gemini API 的 generateContent 请求
+  if (url.pathname.includes(":generateContent")) {
+    console.log('Handling generateContent request:', url.pathname);
+    return handleAPIRequest(req);
+  }
+
   return new Response('ok');
 }
 
