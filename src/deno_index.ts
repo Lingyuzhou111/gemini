@@ -187,6 +187,17 @@ async function handleRequest(req: Request): Promise<Response> {
       // 检查并修正请求体结构
       if (apiRequestBody.contents && Array.isArray(apiRequestBody.contents)) {
         console.log('Request has contents array, length:', apiRequestBody.contents.length);
+        
+        // 检查是否是图像生成请求
+        if (apiRequestBody.generation_config) {
+          console.log('Request has generation_config:', Object.keys(apiRequestBody.generation_config));
+          
+          // 确保请求明确要求返回图像
+          if (!apiRequestBody.generation_config.response_mime_types) {
+            console.log('Adding response_mime_types to request');
+            apiRequestBody.generation_config.response_mime_types = ["image/png"];
+          }
+        }
       } else {
         console.log('Request missing proper contents structure');
       }
@@ -210,6 +221,9 @@ async function handleRequest(req: Request): Promise<Response> {
       try {
         const jsonData = JSON.parse(responseData);
         console.log('Response JSON structure:', Object.keys(jsonData));
+        
+        // 检查是否包含图像数据
+        let hasImageData = false;
         if (jsonData.candidates) {
           console.log('Has candidates, count:', jsonData.candidates.length);
           if (jsonData.candidates.length > 0) {
@@ -220,10 +234,21 @@ async function handleRequest(req: Request): Promise<Response> {
                 console.log('Parts count:', jsonData.candidates[0].content.parts.length);
                 jsonData.candidates[0].content.parts.forEach((part, index) => {
                   console.log(`Part ${index} keys:`, Object.keys(part));
+                  
+                  // 检查是否有图像数据
+                  if (part.inline_data && part.inline_data.mime_type && part.inline_data.mime_type.startsWith('image/')) {
+                    hasImageData = true;
+                    console.log(`Part ${index} contains image data of type ${part.inline_data.mime_type}`);
+                  }
                 });
               }
             }
           }
+        }
+        
+        // 如果是图像生成请求但没有返回图像，记录警告
+        if (!hasImageData && apiRequestBody.generation_config && apiRequestBody.generation_config.response_mime_types) {
+          console.warn('WARNING: Image generation request did not return image data in response');
         }
       } catch (parseError) {
         console.log('Response is not valid JSON');
