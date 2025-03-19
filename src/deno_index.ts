@@ -150,6 +150,76 @@ async function handleRequest(req: Request): Promise<Response> {
     }
   }
 
+  // 处理融图请求
+  if (url.pathname === "/gemini") {
+    console.log('Handling Gemini fusion request');
+    
+    try {
+      // 读取请求体
+      const requestBody = await req.json();
+      
+      // 检查请求体中是否包含必要的字段
+      if (!requestBody.model || !requestBody.key) {
+        return new Response(JSON.stringify({ error: "Missing required fields: model or key" }), {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+          },
+        });
+      }
+      
+      // 构建Gemini API URL
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${requestBody.model}:generateContent`;
+      
+      // 获取API密钥
+      const apiKey = requestBody.key;
+      
+      // 创建完整URL
+      const fullUrl = new URL(apiUrl);
+      fullUrl.searchParams.append("key", apiKey);
+      
+      // 准备请求内容
+      const apiRequestBody = requestBody.content || requestBody;
+      
+      // 转发请求
+      console.log(`Forwarding fusion request to: ${fullUrl.toString()}`);
+      const response = await fetch(fullUrl.toString(), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(apiRequestBody),
+      });
+      
+      // 获取响应数据
+      const responseData = await response.text();
+      console.log(`Fusion response status: ${response.status}`);
+      console.log(`Fusion response data length: ${responseData.length}`);
+      
+      // 返回响应
+      return new Response(responseData, {
+        status: response.status,
+        headers: {
+          "Content-Type": response.headers.get("Content-Type") || "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+      });
+    } catch (error) {
+      console.error("Error handling fusion request:", error);
+      return new Response(JSON.stringify({ 
+        error: "Error handling fusion request", 
+        details: error instanceof Error ? error.message : "Unknown error" 
+      }), {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+      });
+    }
+  }
+
   return new Response('ok');
 }
 
