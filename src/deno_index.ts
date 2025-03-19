@@ -192,11 +192,8 @@ async function handleRequest(req: Request): Promise<Response> {
         if (apiRequestBody.generation_config) {
           console.log('Request has generation_config:', Object.keys(apiRequestBody.generation_config));
           
-          // 确保请求明确要求返回图像
-          if (!apiRequestBody.generation_config.response_mime_types) {
-            console.log('Adding response_mime_types to request');
-            apiRequestBody.generation_config.response_mime_types = ["image/png"];
-          }
+          // 不再自动添加response_mime_types参数，因为某些模型不支持
+          console.log('Not adding response_mime_types to avoid compatibility issues');
         }
       } else {
         console.log('Request missing proper contents structure');
@@ -247,7 +244,7 @@ async function handleRequest(req: Request): Promise<Response> {
         }
         
         // 如果是图像生成请求但没有返回图像，记录警告
-        if (!hasImageData && apiRequestBody.generation_config && apiRequestBody.generation_config.response_mime_types) {
+        if (!hasImageData && apiRequestBody.generation_config) {
           console.warn('WARNING: Image generation request did not return image data in response');
         }
       } catch (parseError) {
