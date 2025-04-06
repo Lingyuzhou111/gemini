@@ -2,6 +2,22 @@ async function handleWebSocket(req: Request): Promise<Response> {
   const { socket: clientWs, response } = Deno.upgradeWebSocket(req);
 
   const url = new URL(req.url);
+  
+  // 模型名称映射表
+  const modelMapping: { [key: string]: string } = {
+    'gemini-2.5-pro-exp': 'gemini-2.5-pro-preview-03-25'
+  };
+  
+  // 提取并映射模型名称
+  const pathParts = url.pathname.split('/');
+  const modelIndex = pathParts.findIndex(part => part.startsWith('gemini-'));
+  if (modelIndex !== -1) {
+    const requestedModel = pathParts[modelIndex];
+    const actualModel = modelMapping[requestedModel] || requestedModel;
+    pathParts[modelIndex] = actualModel;
+    url.pathname = pathParts.join('/');
+  }
+  
   const targetUrl = `wss://generativelanguage.googleapis.com${url.pathname}${url.search}`;
 
   console.log('Target URL:', targetUrl);
@@ -90,7 +106,7 @@ async function handleRequest(req: Request): Promise<Response> {
     
     // 模型名称映射表
     const modelMapping: { [key: string]: string } = {
-      'gemini-2.5-pro-preview-03-25': 'gemini-2.5-pro-exp'
+      'gemini-2.5-pro-exp': 'gemini-2.5-pro-preview-03-25'
     };
     
     // 提取模型名称和请求路径
