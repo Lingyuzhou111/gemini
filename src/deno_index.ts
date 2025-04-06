@@ -88,9 +88,19 @@ async function handleRequest(req: Request): Promise<Response> {
   if (url.pathname.includes(":generateContent")) {
     console.log('Handling generateContent request:', url.pathname);
     
+    // 模型名称映射表
+    const modelMapping: { [key: string]: string } = {
+      'gemini-2.5-pro-preview-03-25': 'gemini-2.5-pro-exp'
+    };
+    
     // 提取模型名称和请求路径
     const modelPath = url.pathname.split('/v1beta/')[1];
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/${modelPath}`;
+    const requestedModel = modelPath.split(':')[0];
+    
+    // 检查是否需要进行模型映射
+    const actualModel = modelMapping[requestedModel] || requestedModel;
+    const mappedPath = modelPath.replace(requestedModel, actualModel);
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/${mappedPath}`;
     
     // 获取授权头
     const authHeader = req.headers.get("Authorization");
@@ -277,4 +287,4 @@ async function handleRequest(req: Request): Promise<Response> {
   return new Response('ok');
 }
 
-Deno.serve(handleRequest); 
+Deno.serve(handleRequest);
